@@ -1,14 +1,42 @@
 const express = require("express");
 const Reaction = require("../models/reactionModel");
 const Post = require("../models/postModal");
+const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
+const requireAuth = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    req.authUser = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const getActorId = (req) => req.authUser?._id;
+
 // React to post
-router.post("/:postId/react", async (req, res) => {
+router.post("/:postId/react", requireAuth, async (req, res) => {
   try {
     const { postId } = req.params;
-    const { userId, type } = req.body;
+    const { type } = req.body;
+    const userId = getActorId(req);
+
+    const allowedTypes = ["like", "love", "haha", "wow", "sad", "angry"];
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({ message: "Invalid reaction type" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
     // Check if user already reacted
     let existingReaction = await Reaction.findOne({ postId, userId });

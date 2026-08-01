@@ -5,6 +5,23 @@ const User = require("../models/userModel");
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+const Notification = require("../models/notificationModel");
+
+const requireAuth = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    req.authUser = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const getActorId = (req) => req.authUser?.id || req.authUser?._id;
 
 // USER RECOMMENDATIONS (User Discovery)
 // GET /api/users/suggestions?userId=...
@@ -134,13 +151,9 @@ router.get("/:userId", async (req, res) => {
 });
 
 // FOLLOW
-router.post("/follow/:userId", async (req, res) => {
+router.post("/follow/:userId", requireAuth, async (req, res) => {
   try {
-    const { currentUserId } = req.body;
-    
-    if (!currentUserId) {
-      return res.status(400).json({ message: "currentUserId required" });
-    }
+    const currentUserId = getActorId(req);
 
     const userToFollow = await User.findById(req.params.userId);
     const currentUser = await User.findById(currentUserId);
@@ -158,6 +171,13 @@ router.post("/follow/:userId", async (req, res) => {
       if (!hasFollower) {
         userToFollow.followers.push(currentUserId);
       }
+
+      // Create notification for the followed user
+      await Notification.create({
+        recipientId: req.params.userId,
+        senderId: currentUserId,
+        type: "follow",
+      });
     }
     
     await currentUser.save();
@@ -170,13 +190,9 @@ router.post("/follow/:userId", async (req, res) => {
 });
 
 // UNFOLLOW
-router.post("/unfollow/:userId", async (req, res) => {
+router.post("/unfollow/:userId", requireAuth, async (req, res) => {
   try {
-    const { currentUserId } = req.body;
-    
-    if (!currentUserId) {
-      return res.status(400).json({ message: "currentUserId required" });
-    }
+    const currentUserId = getActorId(req);
 
     const userToUnfollow = await User.findById(req.params.userId);
     const currentUser = await User.findById(currentUserId);
@@ -201,8 +217,13 @@ router.post("/unfollow/:userId", async (req, res) => {
 });
 
 // UPDATE PROFILE ✅ added crops
-router.put("/:userId", async (req, res) => {
+router.put("/:userId", requireAuth, async (req, res) => {
   try {
+    const actorId = getActorId(req);
+    if (actorId !== req.params.userId) {
+      return res.status(403).json({ message: "Can only update your own profile" });
+    }
+
     const { bio, farmName, region, farmSize, crops } = req.body;
     const user = await User.findByIdAndUpdate(
       req.params.userId,

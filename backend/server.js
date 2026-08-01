@@ -1,27 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
-
-function loadEnvFromFile() {
-  const envPath = path.join(__dirname, ".env");
-  if (!fs.existsSync(envPath)) return;
-  const lines = fs.readFileSync(envPath, "utf8").split("\n");
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const separatorIndex = line.indexOf("=");
-    if (separatorIndex === -1) continue;
-    const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim();
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
-  }
-}
-
-loadEnvFromFile();
+const helmet = require("helmet");
+require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -49,14 +30,43 @@ const igtvRoutes = require("./routes/igtvRoutes");
 
 const app = express();
 
-// CORS
+const requiredProductionSecrets = [
+  "JWT_SECRET",
+  "MONGODB_URI"
+];
+
+if (process.env.NODE_ENV === "production") {
+  const missingSecrets = requiredProductionSecrets.filter((key) => !process.env[key]);
+  if (missingSecrets.length) {
+    throw new Error(`Missing required production environment variables: ${missingSecrets.join(", ")}`);
+  }
+
+  if (process.env.JWT_SECRET === "your-secret-key" || process.env.JWT_SECRET.length < 32) {
+    throw new Error("JWT_SECRET must be a strong production secret with at least 32 characters");
+  }
+}
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || process.env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.set("trust proxy", 1);
+app.use(helmet());
+
+// CORS. Native mobile clients usually send no Origin header.
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true
 }));
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
 
 // Static images
 app.use("/uploads", express.static("uploads"));
@@ -87,7 +97,7 @@ app.use("/api/reels", reelRoutes);
 app.use("/api/igtv", igtvRoutes);
 
 // MongoDB
-const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/farmAI";
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://127.0.0.1:27017/farmAI";
 mongoose.connect(mongoUri)
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log(err));

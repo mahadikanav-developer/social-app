@@ -1,15 +1,29 @@
 const express = require("express");
 const Story = require("../models/storyModel");
+const jwt = require("jsonwebtoken");
 const router = express.Router();
 
-// Create a story
-router.post("/", async (req, res) => {
+const requireAuth = (req, res, next) => {
   try {
-    const { userId, text, image, bgColor, textColor } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ message: "User ID required" });
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
     }
+
+    req.authUser = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const getActorId = (req) => req.authUser?._id;
+
+// Create a story
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    const { text, image, bgColor, textColor } = req.body;
+    const userId = getActorId(req);
 
     const story = await Story.create({
       userId,
@@ -67,12 +81,15 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // Add view to story
-router.post("/:storyId/view", async (req, res) => {
+router.post("/:storyId/view", requireAuth, async (req, res) => {
   try {
-    const { viewerId } = req.body;
+    const viewerId = getActorId(req);
     const story = await Story.findById(req.params.storyId);
+    if (!story) {
+      return res.status(404).json({ message: "Story not found" });
+    }
 
-    if (!story.views.includes(viewerId)) {
+    if (!story.views.some(id => id.toString() === viewerId)) {
       story.views.push(viewerId);
       await story.save();
     }
@@ -84,8 +101,17 @@ router.post("/:storyId/view", async (req, res) => {
 });
 
 // Delete a story
-router.delete("/:storyId", async (req, res) => {
+router.delete("/:storyId", requireAuth, async (req, res) => {
   try {
+    const story = await Story.findById(req.params.storyId);
+    if (!story) {
+      return res.status(404).json({ message: "Story not found" });
+    }
+
+    if (story.userId.toString() !== getActorId(req)) {
+      return res.status(403).json({ message: "Can only delete your own story" });
+    }
+
     await Story.findByIdAndDelete(req.params.storyId);
     res.json({ message: "Story deleted" });
   } catch (err) {

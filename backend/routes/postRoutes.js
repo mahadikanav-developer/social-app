@@ -1,13 +1,32 @@
 const express = require("express");
 const Post = require("../models/postModal");
+const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
+const requireAuth = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    req.authUser = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const getActorId = (req) => req.authUser?._id;
+
 // CREATE POST (with hashtag extraction)
 const Hashtag = require("../models/hashtagModel");
-router.post("/", async (req, res) => {
+const Notification = require("../models/notificationModel");
+router.post("/", requireAuth, async (req, res) => {
   try {
-    const { userId, text, image, crop, type, price, unit, location, contact } = req.body;
+    const { text, image, crop, type, price, unit, location, contact } = req.body;
+    const userId = getActorId(req);
 
     const post = await Post.create({
       userId,
@@ -95,16 +114,27 @@ router.get("/:id", async (req, res) => {
 });
 
 // LIKE POST
-router.put("/:id/like", async (req, res) => {
+router.put("/:id/like", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = getActorId(req);
 
     const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
-    if (!post.likes.includes(userId)) {
+    if (!post.likes.some(id => id.toString() === userId)) {
       post.likes.push(userId);
+      
+      // Create notification for post owner (if not liking own post)
+      if (post.userId.toString() !== userId) {
+        await Notification.create({
+          recipientId: post.userId,
+          senderId: userId,
+          type: "like",
+          postId: post._id,
+        });
+      }
     } else {
-      post.likes = post.likes.filter(id => id !== userId);
+      post.likes = post.likes.filter(id => id.toString() !== userId);
     }
 
     await post.save();
@@ -117,9 +147,10 @@ router.put("/:id/like", async (req, res) => {
 });
 
 // ADD COMMENT
-router.post("/:id/comment", async (req, res) => {
+router.post("/:id/comment", requireAuth, async (req, res) => {
   try {
-    const { userId, text } = req.body;
+    const { text } = req.body;
+    const userId = getActorId(req);
     const post = await Post.findById(req.params.id);
 
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -132,6 +163,16 @@ router.post("/:id/comment", async (req, res) => {
 
     await post.save();
     await post.populate("comments.userId", "name avatar");
+
+    // Create notification for post owner (if not commenting on own post)
+    if (post.userId.toString() !== userId) {
+      await Notification.create({
+        recipientId: post.userId,
+        senderId: userId,
+        type: "comment",
+        postId: post._id,
+      });
+    }
 
     res.json(post);
   } catch (err) {
@@ -169,10 +210,10 @@ router.delete("/:postId/comment/:commentId", async (req, res) => {
 });
 
 // DELETE POST
-router.delete("/:postId", async (req, res) => {
+router.delete("/:postId", requireAuth, async (req, res) => {
   try {
     const { postId } = req.params;
-    const { userId } = req.body;
+    const userId = getActorId(req);
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: "Post not found" });

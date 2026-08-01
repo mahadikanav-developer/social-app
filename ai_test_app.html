@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌾 FarmAI - Your Smart Farming Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #202123;
+            color: #e5e7eb;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #111827;
+            border-right: 1px solid #273449;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 22px 20px;
+            border-bottom: 1px solid #273449;
+        }
+
+        .sidebar-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-header p {
+            font-size: 13px;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+
+        .sidebar-summary {
+            padding: 18px 20px;
+            margin: 0 16px 18px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            background: rgba(255,255,255,0.03);
+            color: #e5e7eb;
+        }
+
+        .sidebar-summary .summary-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            margin-bottom: 14px;
+            color: #9ca3af;
+        }
+
+        .sidebar-summary .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-summary .summary-row strong {
+            color: #f8fafc;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .sidebar-summary .summary-row span {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .input-buttons {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 56px;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            padding: 8px 0;
+            background: #0b0f19;
+            border: 1px solid #273449;
+            border-radius: 18px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+            display: none;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .suggestions.show {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: grid;
+            gap: 6px;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(79, 70, 229, 0.12);
+        }
+
+        .suggestion-text {
+            color: #e5e7eb;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .suggestion-type {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .user-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            background: #111827;
+            color: #e5e7eb;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .user-input::placeholder {
+            color: #6b7280;
+        }
+
+        .user-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        .settings-btn {
+            width: 100%;
+            padding: 11px 14px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            color: #e5e7eb;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .settings-btn:hover {
+            background: #111827;
+            transform: translateY(-1px);
+        }
+
+        .quick-actions {
+            padding: 18px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .action-group {
+            margin-bottom: 24px;
+        }
+
+        .action-group h3 {
+            font-size: 11px;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            margin-bottom: 10px;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 12px 14px;
+            background: #111827;
+            border: 1px solid #273449;
+            border-radius: 12px;
+            color: #e5e7eb;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 10px;
+            transition: transform 0.2s, border-color 0.2s, background 0.2s;
+            text-align: left;
+        }
+
+        .action-btn:hover {
+            background: #1f2937;
+            border-color: #4f46e5;
+            transform: translateX(2px);
+        }
+
+        .action-btn:active {
+            transform: translateX(0);
+        }
+
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0b0f19;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 28px;
+            border-bottom: 1px solid #273449;
+            background: #111827;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #9ca3af;
+            border-radius: 50%;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        .status-dot.online {
+            background: #34d399;
+            box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.18);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 24px 28px;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0b0f19 0%, #111827 100%);
+        }
+
+        .message {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 18px;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            min-width: 42px;
+            min-height: 42px;
+            border-radius: 50%;
+            background: #1f2937;
+            color: #e5e7eb;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+        }
+
+        .message-content {
+            max-width: 760px;
+        }
+
+        .message-text {
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: #111827;
+            color: #e5e7eb;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .message.user .message-text {
+            background: #1f2937;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .action-icon {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0.75;
+            transition: opacity 0.2s;
+        }
+
+        .action-icon:hover {
+            opacity: 1;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 24px 28px;
+            align-items: center;
+            gap: 14px;
+            border-top: 1px solid #273449;
+            background: #111827;
+        }
+
+        .typing-indicator.show {
+            display: flex;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .typing-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4f46e5;
+            animation: blink 1.2s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.3; }
+            40% { opacity: 1; }
+        }
+
+        .chat-input-area {
+            padding: 18px 28px 24px;
+            border-top: 1px solid #273449;
+            background: #111827;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            position: relative;
+        }
+
+        #chatInput {
+            width: 100%;
+            min-height: 52px;
+            max-height: 140px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid #273449;
+            background: #0b0f19;
+            color: #e5e7eb;
+            resize: none;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        #chatInput:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        .input-btn {
+            min-width: 88px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .send-btn {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #374151;
+            color: #e5e7eb;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #273449;
+            background: #0b0f19;
+            color: #e5e7eb;
+            margin-top: 8px;
+        }
+
+        .form-input::placeholder {
+            color: #6b7280;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            width: min(640px, 100%);
+            background: #111827;
+            border-radius: 24px;
+            border: 1px solid #273449;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+        }
+
+        .modal-header,
+        .modal-actions {
+            padding: 20px 24px;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #273449;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .modal-body {
+            padding: 0 24px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            color: #cbd5e1;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid #273449;
+        }
+
+        @media (max-width: 1120px) {
+            .sidebar {
+                width: 260px;
+            }
+
+            .chat-messages {
+                padding: 20px;
+            }
+
+            .chat-header,
+            .chat-input-area {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .main-chat {
+                min-height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>🌾 FarmAI</h1>
+                <p>Your Smart Farming Assistant</p>
+            </div>
+
+            <div class="sidebar-summary">
+                <div class="summary-title">Live Market Snapshot</div>
+                <div class="summary-row">
+                    <span>Wheat</span>
+                    <strong id="marketWheatPrice">Loading...</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Trend</span>
+                    <strong id="marketWheatTrend">—</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Supply</span>
+                    <strong id="marketWheatSupply">—</strong>
+                </div>
+            </div>
+
+            <div class="user-section">
+                <input type="text" class="user-input" id="userId" placeholder="Enter your name..." value="farmer_user">
+                <button class="settings-btn" onclick="openSettings()">⚙️ Settings & Preferences</button>
+            </div>
+
+            <div class="quick-actions">
+                <div class="action-group">
+                    <h3>🌱 Farming Tasks</h3>
+                    <button class="action-btn" onclick="quickAction('disease')">🔬 Check Crop Disease</button>
+                    <button class="action-btn" onclick="quickAction('weather')">🌤️ Get Weather Forecast</button>
+                    <button class="action-btn" onclick="quickAction('soil')">🌱 Analyze Soil Health</button>
+                    <button class="action-btn" onclick="quickAction('yield')">📊 Predict Crop Yield</button>
+                    <button class="action-btn" onclick="quickAction('market')">💰 Check Market Prices</button>
+                </div>
+
+                <div class="action-group">
+                    <h3>📝 Content & Planning</h3>
+                    <button class="action-btn" onclick="quickAction('caption')">📝 Generate Social Caption</button>
+                    <button class="action-btn" onclick="quickAction('translate')">🌐 Translate Content</button>
+                    <button class="action-btn" onclick="quickAction('optimize')">📈 Farm Optimization</button>
+                    <button class="action-btn" onclick="quickAction('analytics')">📊 Farm Analytics</button>
+                    <button class="action-btn" onclick="quickAction('scenario')">🎮 Scenario Planning</button>
+                </div>
+
+                <div class="action-group">
+                    <h3>🚀 World-Class Features</h3>
+                    <button class="action-btn" onclick="quickAction('satellite')">🛰️ Satellite Analysis</button>
+                    <button class="action-btn" onclick="quickAction('iot')">📡 IoT Monitoring</button>
+                    <button class="action-btn" onclick="quickAction('sustainability')">🌍 Sustainability Score</button>
+                    <button class="action-btn" onclick="quickAction('economic')">💼 Economic Optimization</button>
+                    <button class="action-btn" onclick="quickAction('global-market')">🌐 Global Market Intel</button>
+                    <button class="action-btn" onclick="quickAction('climate')">🌡️ Climate Adaptation</button>
+                    <button class="action-btn" onclick="quickAction('blockchain')">⛓️ Blockchain Traceability</button>
+                    <button class="action-btn" onclick="quickAction('expert')">👨‍🔬 AI Expert Consultation</button>
+                </div>
+
+                <div class="action-group">
+                    <h3>🔧 Tools</h3>
+                    <button class="action-btn" onclick="quickAction('history')">📜 View Chat History</button>
+                    <button class="action-btn" onclick="quickAction('clear')">🗑️ Clear Chat</button>
+                    <button class="action-btn" onclick="quickAction('health')">✅ System Health</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <div class="chat-title">FarmAI Assistant</div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Connecting...</span>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai">
+                    <div class="message-avatar">🌾</div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            Hello! I'm your FarmAI assistant. I can help you with crop diseases, weather forecasts, soil analysis, yield predictions, market prices, and much more. What would you like to know about your farm today?
+                        </div>
+                        <div class="message-actions">
+                            <svg class="action-icon" onclick="copyMessage(this)" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="message-avatar">🌾</div>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-container">
+                    <div class="suggestions" id="suggestions"></div>
+                    <div class="input-wrapper">
+                        <textarea
+                            class="chat-input"
+                            id="chatInput"
+                            placeholder="Ask me anything about farming..."
+                            rows="1"
+                            onkeydown="handleKeyDown(event)"
+                            oninput="handleInput()"
+                        ></textarea>
+                        <div class="input-buttons">
+                            <button class="input-btn voice" id="voiceBtn" onclick="toggleVoice()" title="Voice input">
+                                🎤
+                            </button>
+                            <button class="input-btn send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings & Preferences</h2>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+
+            <form class="settings-form" id="settingsForm">
+                <div class="form-group">
+                    <label class="form-label">Language</label>
+                    <select class="form-select" id="settingLanguage">
+                        <option value="english">English</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="spanish">Spanish</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Experience Level</label>
+                    <select class="form-select" id="settingExperience">
+                        <option value="beginner">Beginner Farmer</option>
+                        <option value="intermediate">Intermediate Farmer</option>
+                        <option value="advanced">Advanced Farmer</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-input" id="settingLocation" placeholder="e.g., Punjab, India">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Units</label>
+                    <select class="form-select" id="settingUnits">
+                        <option value="metric">Metric (kg, hectares)</option>
+                        <option value="imperial">Imperial (lbs, acres)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Detail Level</label>
+                    <select class="form-select" id="settingDetail">
+                        <option value="brief">Brief answers</option>
+                        <option value="standard">Standard detail</option>
+                        <option value="detailed">Detailed explanations</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notifications</label>
+                    <select class="form-select" id="settingNotifications">
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Preferred Crops</label>
+                    <input type="text" class="form-input" id="settingCrops" placeholder="wheat, rice, corn (comma separated)">
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+                <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'http://localhost:5001/api/ai';
+        let currentUser = 'farmer_user';
+        let isRecording = false;
+        let recognition = null;
+        let synth = window.speechSynthesis;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            checkConnection();
+            await loadSettings();
+            updateMarketSnapshot();
+            setupVoiceRecognition();
+
+            // Auto-resize textarea
+            document.getElementById('chatInput').addEventListener('input', autoResize);
+        });
+
+        // Connection check
+        async function checkConnection() {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            try {
+                const response = await fetch(`${API_URL}/health`, { signal: controller.signal });
+                if (response.ok) {
+                    statusDot.classList.add('online');
+                    statusText.textContent = 'Online';
+                } else {
+                    throw new Error('Service unavailable');
+                }
+            } catch (err) {
+                statusDot.classList.remove('online');
+                statusText.textContent = 'Offline';
+                console.warn('AI Service offline:', err.message);
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        async function updateMarketSnapshot() {
+            const summaryPrice = document.getElementById('marketWheatPrice');
+            const summaryTrend = document.getElementById('marketWheatTrend');
+            const summarySupply = document.getElementById('marketWheatSupply');
+
+            try {
+                const locationPref = document.getElementById('settingLocation').value || 'Asia';
+                const response = await fetch(`${API_URL}/market-prices/wheat?location=${encodeURIComponent(locationPref)}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                summaryPrice.textContent = `${data.current_price_local_per_kg} ${data.currency}/kg`;
+                summaryTrend.textContent = data.trend;
+                summarySupply.textContent = data.supply_status;
+            } catch (err) {
+                summaryPrice.textContent = 'Unavailable';
+                summaryTrend.textContent = 'Offline';
+                summarySupply.textContent = 'Unavailable';
+                console.warn('Market snapshot failed:', err.message);
+            }
+        }
+
+        // Settings management
+        async function loadSettings() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) return;
+
+            try {
+                const response = await fetch(`${API_URL}/settings/${userId}`);
+                const data = await response.json();
+
+                // Update form fields
+                document.getElementById('settingLanguage').value = data.language || 'english';
+                document.getElementById('settingExperience').value = data.experience_level || 'intermediate';
+                document.getElementById('settingLocation').value = data.location || '';
+                document.getElementById('settingUnits').value = data.units || 'metric';
+                document.getElementById('settingDetail').value = data.detail_level || 'standard';
+                document.getElementById('settingNotifications').value = String(data.notifications) || 'true';
+                document.getElementById('settingCrops').value = (data.preferred_crops || []).join(', ');
+
+                currentUser = userId;
+            } catch (err) {
+                console.warn('Settings load failed:', err.message);
+            }
+        }
+
+        function openSettings() {
+            loadSettings();
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        async function saveSettings() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('Please enter a user ID first');
+                return;
+            }
+
+            const settings = {
+                language: document.getElementById('settingLanguage').value,
+                experience_level: document.getElementById('settingExperience').value,
+                location: document.getElementById('settingLocation').value,
+                units: document.getElementById('settingUnits').value,
+                detail_level: document.getElementById('settingDetail').value,
+                notifications: document.getElementById('settingNotifications').value === 'true',
+                preferred_crops: document.getElementById('settingCrops').value.split(',').map(s => s.trim()).filter(s => s)
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/settings/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    closeSettings();
+                    addMessage('✅ Settings saved successfully!', 'ai');
+                } else {
+                    throw new Error('Save failed');
+                }
+            } catch (err) {
+                alert('Failed to save settings: ' + err.message);
+            }
+        }
+
+        // Chat functionality
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            const userId = document.getElementById('userId').value;
+
+            if (!message || !userId) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            autoResize();
+
+            // Show typing indicator
+            showTyping();
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, user_id: userId })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                hideTyping();
+                addMessage(data.reply, 'ai');
+
+                // Auto-speak response if voice is enabled
+                if (synth && document.getElementById('voiceBtn').classList.contains('active')) {
+                    speakText(data.reply);
+                }
+
+            } catch (err) {
+                hideTyping();
+                addMessage('❌ Sorry, I encountered an error: ' + err.message, 'ai');
+                console.error('Chat error:', err);
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const avatar = sender === 'user' ? currentUser.charAt(0).toUpperCase() : '🌾';
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div class="message-text">${formatMessage(text)}</div>
+                    <div class="message-actions">
+                        <svg class="action-icon" onclick="copyMessage(this)" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                        </svg>
+                        <svg class="action-icon" onclick="speakMessage(this)" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                        </svg>
+                    </div>
+                </div>
+            `;
+
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function formatMessage(text) {
+            // Basic formatting for better readability
+            return text
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        }
+
+        function showTyping() {
+            document.getElementById('typingIndicator').classList.add('show');
+        }
+
+        function hideTyping() {
+            document.getElementById('typingIndicator').classList.remove('show');
+        }
+
+        // Voice functionality
+        function setupVoiceRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('chatInput').value = transcript;
+                    autoResize();
+                    updateSendButton();
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    isRecording = false;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                };
+            }
+        }
+
+        function toggleVoice() {
+            const voiceBtn = document.getElementById('voiceBtn');
+
+            if (!recognition) {
+                alert('Voice recognition not supported in this browser');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+                voiceBtn.classList.remove('recording');
+            } else {
+                recognition.start();
+                voiceBtn.classList.add('recording');
+                isRecording = true;
+            }
+        }
+
+        function speakText(text) {
+            if (synth) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                synth.speak(utterance);
+            }
+        }
+
+        function speakMessage(element) {
+            const messageText = element.closest('.message-content').querySelector('.message-text').textContent;
+            speakText(messageText);
+        }
+
+        function copyMessage(element) {
+            const messageText = element.closest('.message-content').querySelector('.message-text').textContent;
+            navigator.clipboard.writeText(messageText).then(() => {
+                // Show temporary feedback
+                const original = element.innerHTML;
+                element.innerHTML = '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>';
+                setTimeout(() => element.innerHTML = original, 1000);
+            });
+        }
+
+        // Quick actions
+        function quickAction(action) {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('Please enter your name first');
+                return;
+            }
+
+            const prompts = {
+                'disease': 'I have a tomato plant with yellow leaves. What could be wrong?',
+                'weather': 'What will the weather be like tomorrow for farming?',
+                'soil': 'My soil pH is 6.8, nitrogen 45, phosphorus 25, potassium 180. Is this good?',
+                'yield': 'I have 5 hectares of wheat. What yield can I expect?',
+                'market': 'What are the current wheat prices?',
+                'caption': 'Create a social media post about my harvest',
+                'translate': 'Translate "wheat farming tips" to Hindi',
+                'optimize': 'How can I optimize my irrigation system?',
+                'analytics': 'Show me analytics for my farm performance',
+                'scenario': 'What if rainfall decreases by 30% this season?',
+                'satellite': 'Run satellite imagery analysis for my farm',
+                'iot': 'Show me IoT sensor insights for my fields',
+                'sustainability': 'Calculate my farm sustainability score',
+                'economic': 'Optimize my farm economics and resource allocation',
+                'global-market': 'Give me global market intelligence for wheat in Europe',
+                'climate': 'Create a climate adaptation plan for my crops',
+                'blockchain': 'Show blockchain traceability for my product',
+                'expert': 'Connect me with expert agricultural advice',
+                'history': 'Show me my recent chat history',
+                'clear': 'Clear chat history',
+                'health': 'Check system health'
+            };
+
+            if (action === 'clear') {
+                document.getElementById('chatMessages').innerHTML = '';
+                return;
+            }
+
+            if (action === 'history') {
+                loadHistory();
+                return;
+            }
+
+            if (action === 'health') {
+                checkConnection();
+                addMessage('🔍 Checking system health...', 'user');
+                return;
+            }
+
+            const worldClassActions = ['satellite', 'iot', 'sustainability', 'economic', 'global-market', 'climate', 'blockchain', 'expert'];
+            if (worldClassActions.includes(action)) {
+                triggerWorldClassAction(action, userId);
+                return;
+            }
+
+            document.getElementById('chatInput').value = prompts[action];
+            updateSendButton();
+            sendMessage();
+        }
+
+        async function triggerWorldClassAction(action, userId) {
+            const endpointMap = {
+                'satellite': 'satellite-analysis',
+                'iot': 'iot-sensor-data',
+                'sustainability': 'sustainability-score',
+                'economic': 'economic-optimization',
+                'global-market': 'global-market-intelligence',
+                'climate': 'climate-adaptation-plan',
+                'blockchain': 'blockchain-traceability',
+                'expert': 'ai-expert-consultation'
+            };
+
+            const payloadMap = {
+                'satellite': { location: 'Central India', crop_type: 'wheat' },
+                'iot': { farm_id: 'FARM_1234' },
+                'sustainability': { organic: true, conservation_tillage: true, renewable_energy: false, farm_type: 'mixed', region: 'Asia' },
+                'economic': { farm_size_hectares: 20, current_profit: 18000, crop_type: 'wheat', irrigation_type: 'drip', input_costs: 12000 },
+                'global-market': { crop_type: 'wheat', region: 'Europe' },
+                'climate': { location: 'Central India', crop_type: 'wheat' },
+                'blockchain': { product_id: 'PROD_202405' },
+                'expert': { query: 'I need advice on crop rotation and pest management', user_profile: { location: 'India', farm_size: 15, experience_level: 'intermediate' } }
+            };
+
+            const endpoint = endpointMap[action];
+            const payload = payloadMap[action] || {};
+
+            addMessage(`🔧 Running ${action.replace(/-/g, ' ')} analysis...`, 'user');
+            showTyping();
+
+            try {
+                const response = await fetch(`${API_URL}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                hideTyping();
+                addMessage(`✅ ${action.replace(/-/g, ' ')} result:\n${JSON.stringify(data, null, 2)}`, 'ai');
+
+                if (synth && document.getElementById('voiceBtn').classList.contains('active')) {
+                    speakText(`${action.replace(/-/g, ' ')} completed. Check the assistant for details.`);
+                }
+            } catch (err) {
+                hideTyping();
+                addMessage('❌ Error: ' + err.message, 'ai');
+                console.error(`${action} error:`, err);
+            }
+        }
+
+        async function loadHistory() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) return;
+
+            try {
+                const response = await fetch(`${API_URL}/history/${userId}?limit=5`);
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    let historyText = '📜 Your recent conversations:\n\n';
+                    data.history.forEach((h, i) => {
+                        historyText += `${i + 1}. **You:** ${h.query}\n   **AI:** ${h.response.substring(0, 100)}...\n\n`;
+                    });
+                    addMessage(historyText, 'ai');
+                } else {
+                    addMessage('📜 No conversation history found.', 'ai');
+                }
+            } catch (err) {
+                addMessage('❌ Could not load history: ' + err.message, 'ai');
+            }
+        }
+
+        // Input handling
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function handleInput() {
+            updateSendButton();
+            showSuggestions();
+            autoResize();
+        }
+
+        function updateSendButton() {
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = !input.value.trim();
+        }
+
+        function autoResize() {
+            const textarea = document.getElementById('chatInput');
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // Smart suggestions
+        function showSuggestions() {
+            const input = document.getElementById('chatInput').value.toLowerCase();
+            const suggestions = document.getElementById('suggestions');
+
+            if (input.length < 2) {
+                suggestions.classList.remove('show');
+                return;
+            }
+
+            const suggestionData = [
+                { text: 'Check crop disease', type: 'Disease Analysis', query: 'I have yellow leaves on my tomato plants' },
+                { text: 'Weather forecast', type: 'Weather', query: 'What will the weather be like tomorrow?' },
+                { text: 'Soil analysis', type: 'Soil Health', query: 'Analyze my soil: pH 6.8, N 45, P 25, K 180' },
+                { text: 'Yield prediction', type: 'Crop Planning', query: 'Predict yield for 5 hectares of wheat' },
+                { text: 'Market prices', type: 'Market Intelligence', query: 'Current wheat market prices' },
+                { text: 'Create social post', type: 'Content Creation', query: 'Generate a caption for my harvest success' },
+                { text: 'Translate to Hindi', type: 'Translation', query: 'Translate farming tips to Hindi' },
+                { text: 'Farm optimization', type: 'Planning', query: 'How to optimize my irrigation system?' },
+                { text: 'Farm analytics', type: 'Analytics', query: 'Show farm performance analytics' },
+                { text: 'Scenario planning', type: 'Planning', query: 'What if rainfall decreases by 30%?' },
+                { text: 'Satellite analysis', type: 'Precision Farming', query: 'Run satellite imagery analysis for my farm' },
+                { text: 'IoT monitoring', type: 'Smart Farming', query: 'Show me IoT sensor insights for my fields' },
+                { text: 'Sustainability score', type: 'Sustainability', query: 'Calculate my farm sustainability score' },
+                { text: 'Global market intel', type: 'Market Intelligence', query: 'Give me global market intelligence for wheat in Europe' },
+                { text: 'Climate adaptation', type: 'Climate', query: 'Create a climate adaptation plan for my crops' },
+                { text: 'Blockchain traceability', type: 'Traceability', query: 'Show blockchain traceability for my product' }
+            ];
+
+            const filtered = suggestionData.filter(item =>
+                item.text.toLowerCase().includes(input) ||
+                item.query.toLowerCase().includes(input)
+            ).slice(0, 5);
+
+            if (filtered.length > 0) {
+                suggestions.innerHTML = filtered.map(item => `
+                    <div class="suggestion-item" onclick="selectSuggestion('${item.query}')">
+                        <div class="suggestion-text">${item.text}</div>
+                        <div class="suggestion-type">${item.type}</div>
+                    </div>
+                `).join('');
+                suggestions.classList.add('show');
+            } else {
+                suggestions.classList.remove('show');
+            }
+        }
+
+        function selectSuggestion(query) {
+            document.getElementById('chatInput').value = query;
+            document.getElementById('suggestions').classList.remove('show');
+            updateSendButton();
+            autoResize();
+        }
+
+        // Click outside to close suggestions
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.input-container')) {
+                document.getElementById('suggestions').classList.remove('show');
+            }
+        });
+
+        // Update user ID
+        document.getElementById('userId').addEventListener('change', function() {
+            currentUser = this.value;
+            loadSettings();
+        });
+    </script>
+</body>
+</html>

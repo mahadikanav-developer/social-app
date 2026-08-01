@@ -1,13 +1,31 @@
 const express = require("express");
 const Reel = require("../models/reelModel");
 const User = require("../models/userModel");
+const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
-// Create reel
-router.post("/", async (req, res) => {
+const requireAuth = (req, res, next) => {
   try {
-    const { userId, videoUrl, title, description, hashtags, music } = req.body;
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    req.authUser = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const getActorId = (req) => req.authUser?.id || req.authUser?._id;
+
+// Create reel
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    const { videoUrl, title, description, hashtags, music } = req.body;
+    const userId = getActorId(req);
 
     const reel = await Reel.create({
       userId,
@@ -62,17 +80,17 @@ router.get("/:reelId", async (req, res) => {
 });
 
 // Like reel
-router.post("/:reelId/like", async (req, res) => {
+router.post("/:reelId/like", requireAuth, async (req, res) => {
   try {
     const { reelId } = req.params;
-    const { userId } = req.body;
+    const userId = getActorId(req);
 
     const reel = await Reel.findById(reelId);
     if (!reel) {
       return res.status(404).json({ message: "Reel not found" });
     }
 
-    if (reel.likes.includes(userId)) {
+    if (reel.likes.some((id) => id.toString() === userId)) {
       reel.likes = reel.likes.filter(l => l.toString() !== userId);
     } else {
       reel.likes.push(userId);
@@ -87,10 +105,11 @@ router.post("/:reelId/like", async (req, res) => {
 });
 
 // Comment on reel
-router.post("/:reelId/comment", async (req, res) => {
+router.post("/:reelId/comment", requireAuth, async (req, res) => {
   try {
     const { reelId } = req.params;
-    const { userId, text } = req.body;
+    const { text } = req.body;
+    const userId = getActorId(req);
 
     const reel = await Reel.findById(reelId);
     if (!reel) {
@@ -126,17 +145,17 @@ router.post("/:reelId/share", async (req, res) => {
 });
 
 // View reel (count view)
-router.post("/:reelId/view", async (req, res) => {
+router.post("/:reelId/view", requireAuth, async (req, res) => {
   try {
     const { reelId } = req.params;
-    const { userId } = req.body;
+    const userId = getActorId(req);
 
     const reel = await Reel.findById(reelId);
     if (!reel) {
       return res.status(404).json({ message: "Reel not found" });
     }
 
-    if (!reel.views.includes(userId)) {
+    if (!reel.views.some((id) => id.toString() === userId)) {
       reel.views.push(userId);
       await reel.save();
     }

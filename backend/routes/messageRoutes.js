@@ -2,12 +2,29 @@ const express = require("express");
 const Conversation = require("../models/conversationModel");
 const Message = require("../models/messageModel");
 const User = require("../models/userModel");
+const jwt = require("jsonwebtoken");
 const router = express.Router();
 
-// Get all conversations for current user
-router.get("/", async (req, res) => {
+const requireAuth = (req, res, next) => {
   try {
-    const { userId } = req.query;
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    req.authUser = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const getActorId = (req) => req.authUser?.id || req.authUser?._id;
+
+// Get all conversations for current user
+router.get("/", requireAuth, async (req, res) => {
+  try {
+    const userId = getActorId(req);
     const conversations = await Conversation.find({
       participants: userId,
     })
@@ -21,9 +38,9 @@ router.get("/", async (req, res) => {
 });
 
 // Get or create a conversation with another user
-router.post("/:userId", async (req, res) => {
+router.post("/:userId", requireAuth, async (req, res) => {
   try {
-    const { currentUserId } = req.body;
+    const currentUserId = getActorId(req);
     const otherUserId = req.params.userId;
 
     // Check if conversation already exists
@@ -49,8 +66,17 @@ router.post("/:userId", async (req, res) => {
 });
 
 // Get all messages in a conversation
-router.get("/:conversationId/messages", async (req, res) => {
+router.get("/:conversationId/messages", requireAuth, async (req, res) => {
   try {
+    const actorId = getActorId(req);
+    const conversation = await Conversation.findById(req.params.conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (!conversation.participants.some((id) => id.toString() === actorId)) {
+      return res.status(403).json({ error: "Cannot view another user's conversation" });
+    }
+
     const messages = await Message.find({
       conversationId: req.params.conversationId,
     })
@@ -64,9 +90,18 @@ router.get("/:conversationId/messages", async (req, res) => {
 });
 
 // Send a message
-router.post("/:conversationId/message", async (req, res) => {
+router.post("/:conversationId/message", requireAuth, async (req, res) => {
   try {
-    const { senderId, text } = req.body;
+    const { text } = req.body;
+    const senderId = getActorId(req);
+    const conversation = await Conversation.findById(req.params.conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (!conversation.participants.some((id) => id.toString() === senderId)) {
+      return res.status(403).json({ error: "Cannot send messages in another user's conversation" });
+    }
+
     const message = await Message.create({
       conversationId: req.params.conversationId,
       senderId,
@@ -90,8 +125,17 @@ router.post("/:conversationId/message", async (req, res) => {
 });
 
 // Delete a message
-router.delete("/:conversationId/message/:messageId", async (req, res) => {
+router.delete("/:conversationId/message/:messageId", requireAuth, async (req, res) => {
   try {
+    const actorId = getActorId(req);
+    const message = await Message.findById(req.params.messageId);
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+    if (message.senderId.toString() !== actorId) {
+      return res.status(403).json({ error: "Can only delete your own messages" });
+    }
+
     await Message.findByIdAndDelete(req.params.messageId);
     res.json({ message: "Message deleted" });
   } catch (err) {

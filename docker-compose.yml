@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: farmsocial-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: farmsocial
+      MONGO_INITDB_ROOT_PASSWORD: farmsocial-dev-password
+      MONGO_INITDB_DATABASE: farmsocial
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - farmsocial-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: farmsocial-backend
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://farmsocial:farmsocial-dev-password@mongodb:27017/farmsocial?authSource=admin
+      JWT_SECRET: dev-secret-key-change-in-production-min-32-chars
+      JWT_EXPIRE: 30d
+      CORS_CREDENTIALS: "true"
+      ALLOWED_ORIGIN: http://localhost:3000
+      LOG_LEVEL: info
+      MAX_LOGIN_ATTEMPTS: 5
+      LOGIN_LOCKOUT_MINUTES: 30
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - farmsocial-network
+    restart: unless-stopped
+
+  # Frontend App
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: farmsocial-frontend
+    ports:
+      - "80:80"
+    environment:
+      REACT_APP_API_URL: http://localhost:5000/api
+      REACT_APP_ENV: development
+    depends_on:
+      - backend
+    networks:
+      - farmsocial-network
+    restart: unless-stopped
+
+  # AI Service
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: farmsocial-ai
+    ports:
+      - "5001:5001"
+    environment:
+      FLASK_ENV: development
+    networks:
+      - farmsocial-network
+    restart: unless-stopped
+
+  # Redis (optional - for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: farmsocial-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - farmsocial-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  farmsocial-network:
+    driver: bridge
